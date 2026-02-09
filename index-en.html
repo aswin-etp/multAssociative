@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Associative Property: Unit Cubes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        /* 47px at 1920px width → scales linearly with width */
+        --base-font-size: calc(47 / 1920 * 100vw);
+        /* 10px at 1920px width → spacing/padding unit */
+        --spacing-unit: calc(10 / 1920 * 100vw);
+        /* 20px corner radius at 1920px width for content cards */
+        --card-radius: calc(20 / 1920 * 100vw);
+        /* 5px shell padding around buttons at 1920px width */
+        --button-shell-padding: calc(5 / 1920 * 100vw);
+        --button-bg: #ff9f1a;
+        --upper-text-color: #ffb84d;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000 url("BG.png") center center / cover no-repeat;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: var(--base-font-size);
+        color: #fff;
+      }
+
+      /* Outer container that always holds a 16:9 frame */
+      .applet-container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .applet-frame {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        width: min(100vw, 177.78vh); /* 16/9 ≈ 1.7778 */
+        max-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        /* Slight tint so BG.png is still visible behind */
+        background: rgba(0, 0, 0, 0.4);
+        overflow: hidden;
+      }
+
+      /* Top single-line context bar */
+      .upper-context {
+        width: 100%;
+        text-align: center;
+        color: var(--upper-text-color);
+        background: rgba(255, 255, 255, 0.1);
+        padding: calc(var(--spacing-unit) * 1.5);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Bottom instruction bar with prev/next buttons */
+      .bottom-bar {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+        padding: calc(var(--spacing-unit) * 1.5);
+        gap: var(--spacing-unit);
+      }
+
+      .ins-text {
+        flex: 1;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Shared button style */
+      .btn-wrapper {
+        display: inline-flex;
+        padding: var(--button-shell-padding);
+        border-radius: calc(var(--button-shell-padding) * 2.5);
+        background: var(--button-bg);
+        box-shadow: 0 calc(var(--spacing-unit) * 0.5)
+          calc(var(--spacing-unit) * 1.5) rgba(0, 0, 0, 0.4);
+      }
+      .btn-wrapper.hidden {
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .btn {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0.25) 100%
+        );
+        color: #000000;
+        border: none;
+        padding: calc(var(--spacing-unit) * 1.4) calc(var(--spacing-unit) * 7.2);
+        cursor: pointer;
+        font: inherit;
+        border-radius: calc(var(--spacing-unit) * 0.8);
+        white-space: nowrap;
+      }
+
+      .btn:focus {
+        outline: none;
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+
+      /* Middle applet region with 2 columns */
+      .applet-region {
+        flex: 1;
+        margin-block: var(--spacing-unit);
+        display: flex;
+        padding-inline: var(--spacing-unit);
+        gap: var(--spacing-unit);
+      }
+
+      .working-area {
+        flex: 0 0 70%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(
+          135deg,
+          rgba(0, 0, 0, 0.25) 0%,
+          rgba(0, 0, 0, 0.5) 100%
+        );
+        border-radius: var(--card-radius);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .control-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-unit);
+        padding-left: var(--spacing-unit);
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: var(--card-radius);
+      }
+
+      .control-placeholder {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      /* Applet-specific UI inside control/working areas */
+      .expr-wrap {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: calc(var(--spacing-unit) * 2);
+      }
+
+      .expr {
+        font-size: calc(var(--base-font-size) * 1.35);
+        font-weight: 700;
+        color: #ffffff;
+        text-align: center;
+        line-height: 1.2;
+        user-select: none;
+      }
+
+      .tap-token {
+        display: inline-block;
+        padding: calc(var(--spacing-unit) * 0.6) calc(var(--spacing-unit) * 1.1);
+        border-radius: calc(var(--spacing-unit) * 0.9);
+        cursor: pointer;
+        transform: translateZ(0);
+        transition: transform 120ms ease, filter 120ms ease, opacity 120ms ease;
+      }
+
+      .tap-token:active {
+        transform: scale(0.97);
+      }
+
+      .tap-token.disabled {
+        opacity: 0.35;
+        cursor: default;
+        filter: grayscale(0.4);
+      }
+
+      .tap-token.hint {
+        filter: drop-shadow(0 0 calc(var(--spacing-unit) * 1.2) rgba(255, 255, 255, 0.45));
+      }
+
+      .work-canvas {
+        position: absolute;
+        inset: 0;
+      }
+
+      .work-label {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--spacing-unit) * 1.2);
+        text-align: center;
+        font-size: calc(var(--base-font-size) * 0.9);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        pointer-events: none;
+        text-shadow: 0 calc(var(--spacing-unit) * 0.3) calc(var(--spacing-unit) * 0.9) rgba(0,0,0,0.55);
+      }
+
+      .work-label.two {
+        display: flex;
+        justify-content: space-between;
+        padding-inline: calc(var(--spacing-unit) * 2);
+        gap: calc(var(--spacing-unit) * 2);
+      }
+
+      .work-label.two > div {
+        flex: 1;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .mini-note {
+        margin-top: calc(var(--spacing-unit) * 1.2);
+        font-size: calc(var(--base-font-size) * 0.55);
+        font-weight: 600;
+        opacity: 0.8;
+      }
+
+      .btn[disabled] {
+        opacity: 0.55;
+        cursor: default;
+      }
+
+      .slider-wrap {
+        width: 100%;
+        padding: calc(var(--spacing-unit) * 1.2);
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--spacing-unit) * 1.2);
+      }
+
+      .slider-row {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 1.2);
+        font-size: calc(var(--base-font-size) * 0.8);
+        flex-wrap: nowrap;
+      }
+
+      .slider-row label {
+        width: 5.2em;
+        font-weight: 700;
+        white-space: nowrap;
+        flex: 0 0 auto;
+      }
+
+      .slider-row input[type="range"] {
+        flex: 0 0 60%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="applet-container">
+      <div class="applet-frame">
+        <!-- upperContext (content injected from texts.js) -->
+        <div id="upperContext" class="upper-context"></div>
+
+        <!-- appletRegion -->
+        <div id="appletRegion" class="applet-region">
+          <div id="workingArea" class="working-area">
+            <div id="workCanvas" class="work-canvas"></div>
+            <div id="workLabel" class="work-label"></div>
+          </div>
+
+          <div id="controlArea" class="control-area">
+            <div class="expr-wrap">
+              <div class="expr" id="controlExpr">
+                <span class="tap-token" data-key="a" id="tokA">4</span>
+                <span> × </span>
+                <span class="tap-token" data-key="b" id="tokB">2</span>
+                <span> × </span>
+                <span class="tap-token" data-key="c" id="tokC">3</span>
+              </div>
+            </div>
+            <div id="sliderPanel" class="slider-wrap" style="display:none;">
+              <div class="slider-row">
+                <label id="labelA">a = 4</label>
+                <input type="range" id="sliderA" min="1" max="6" step="1">
+              </div>
+              <div class="slider-row">
+                <label id="labelB">b = 2</label>
+                <input type="range" id="sliderB" min="1" max="6" step="1">
+              </div>
+              <div class="slider-row">
+                <label id="labelC">c = 3</label>
+                <input type="range" id="sliderC" min="1" max="6" step="1">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- insText + prev/next buttons on same line at bottom -->
+        <div class="bottom-bar">
+          <div class="btn-wrapper">
+            <button id="prevBtn" class="btn" type="button">«</button>
+          </div>
+          <div id="insText" class="ins-text"></div>
+          <div class="btn-wrapper">
+            <button id="nextBtn" class="btn" type="button">»</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="three.min.js"></script>
+    <script src="data.js"></script>
+    <script src="audio.js"></script>
+    <script>
+      (function () {
+        // ------------------------------
+        // i18n (strings live in data.js)
+        // ------------------------------
+        // Language flag: 'en' (English) or 'id' (Bahasa Indonesia)
+        let LANG = 'en';
+
+        // Optional: allow query param ?lang=id
+        try {
+          const qp = new URLSearchParams(location.search);
+          const ql = (qp.get('lang') || '').toLowerCase();
+          if (ql === 'en' || ql === 'id') LANG = ql;
+        } catch (e) {}
+
+        // data.js must define window.APP_TEXT = { en: {...}, id: {...} }
+        const TEXT = (window.APP_TEXT || {});
+        function t(key) {
+          const pack = TEXT[LANG] || TEXT.en || {};
+          return (pack && pack[key]) || (TEXT.en && TEXT.en[key]) || key;
+        }
+
+        // ------------------------------
+        // Audio hooks (audio.js)
+        // ------------------------------
+        const SND = window.APP_AUDIO || {
+          play: () => {},
+          seq: () => {},
+          slide: () => {}
+        };
+
+        // ------------------------------
+        // Config + shared helpers
+        // ------------------------------
+        const VALUES = { a: 4, b: 2, c: 3 };
+        const TOKEN_COLORS = {
+          a: '#5EB2E7', // blue-light
+          b: '#48D1B6', // aqua-light
+          c: '#FFB84D'  // yellow-light
+        };
+
+        // Distinct cuboid colors for overlap
+        const LEFT_CUBOID_COLOR = '#FF738C';  // translucent pink
+        const RIGHT_CUBOID_COLOR = '#DEC3A3'; // translucent sand
+        // Scene 2/4 split separation (reduced)
+        const SPLIT_SEP = 5.2; // was 6.8
+
+        const upperContextEl = document.getElementById('upperContext');
+        const insTextEl = document.getElementById('insText');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        const tokA = document.getElementById('tokA');
+        const tokB = document.getElementById('tokB');
+        const tokC = document.getElementById('tokC');
+        const controlExpr = document.getElementById('controlExpr');
+        const tokens = { a: tokA, b: tokB, c: tokC };
+        function setControlExprSymbolic() {
+          controlExpr.innerHTML = `
+            <span class="tap-token disabled" style="color:${TOKEN_COLORS.a}">a</span>
+            <span> × </span>
+            <span class="tap-token disabled" style="color:${TOKEN_COLORS.b}">b</span>
+            <span> × </span>
+            <span class="tap-token disabled" style="color:${TOKEN_COLORS.c}">c</span>
+          `;
+        }
+
+        // Helper to rebuild numeric control expression with correct colors, values, and event listeners
+        function rebuildNumericControlExpr() {
+          controlExpr.innerHTML = `
+            <span class="tap-token" data-key="a" id="tokA">
+              <span style="color:${TOKEN_COLORS.a}">${VALUES.a}</span>
+            </span>
+            <span> × </span>
+            <span class="tap-token" data-key="b" id="tokB">
+              <span style="color:${TOKEN_COLORS.b}">${VALUES.b}</span>
+            </span>
+            <span> × </span>
+            <span class="tap-token" data-key="c" id="tokC">
+              <span style="color:${TOKEN_COLORS.c}">${VALUES.c}</span>
+            </span>
+          `;
+
+          // Rebind token references
+          tokens.a = document.getElementById('tokA');
+          tokens.b = document.getElementById('tokB');
+          tokens.c = document.getElementById('tokC');
+
+          // Reattach events
+          Object.values(tokens).forEach(el => {
+            el.classList.remove('disabled', 'hint');
+            el.addEventListener('click', onTokenClick);
+            el.addEventListener(
+              'touchend',
+              ev => {
+                ev.preventDefault();
+                el.click();
+              },
+              { passive: false }
+            );
+          });
+        }
+
+        const workCanvasEl = document.getElementById('workCanvas');
+        const workLabelEl = document.getElementById('workLabel');
+
+        const sliderPanel = document.getElementById('sliderPanel');
+        const sliderA = document.getElementById('sliderA');
+        const sliderB = document.getElementById('sliderB');
+        const sliderC = document.getElementById('sliderC');
+        const labelA = document.getElementById('labelA');
+        const labelB = document.getElementById('labelB');
+        const labelC = document.getElementById('labelC');
+
+        function setUpperContext(t) { upperContextEl.textContent = t; }
+        function setInsText(t) { insTextEl.textContent = t; }
+
+        function setNext(label, enabled) {
+          nextBtn.textContent = label;
+          nextBtn.disabled = !enabled;
+          nextBtn.parentElement.classList.toggle('hidden', !enabled);
+        }
+
+        function disableAllTokens() {
+          Object.values(tokens).forEach(el => el.classList.add('disabled'));
+        }
+
+        function enableTokens(keys) {
+          Object.entries(tokens).forEach(([k, el]) => {
+            if (keys.includes(k)) el.classList.remove('disabled');
+            else el.classList.add('disabled');
+          });
+        }
+
+        function setTokenHint(key, on) {
+          Object.values(tokens).forEach(el => el.classList.remove('hint'));
+          if (on && tokens[key]) tokens[key].classList.add('hint');
+        }
+
+        function coloredExpr(keysInOrder, wrapPairs) {
+          // keysInOrder like ['a','b'] renders "(4 × 2)" etc.
+          if (symbolicMode) {
+            return coloredSymbolExpr(keysInOrder, wrapPairs);
+          }
+          const parts = keysInOrder.map(k => {
+            const v = VALUES[k];
+            return `<span style="color:${TOKEN_COLORS[k]}">${v}</span>`;
+          });
+          const core = parts.join(' <span style="opacity:0.9">×</span> ');
+          if (!wrapPairs) return core;
+          return `(<span>${core}</span>)`;
+        }
+
+        let symbolicMode = false;
+
+        function coloredSymbolExpr(keysInOrder, wrapPairs) {
+          const parts = keysInOrder.map(k =>
+            `<span style="color:${TOKEN_COLORS[k]}">${k}</span>`
+          );
+          const core = parts.join(' <span style="opacity:0.9">×</span> ');
+          if (!wrapPairs) return core;
+          return `(<span>${core}</span>)`;
+        }
+
+        function symbolicEquality(order1, order2) {
+          const left = `${coloredSymbolExpr([order1[0], order1[1]], true)} <span style="opacity:0.9">×</span> ${coloredSymbolExpr([order1[2]], false)}`;
+          const right = `${coloredSymbolExpr([order2[0], order2[1]], true)} <span style="opacity:0.9">×</span> ${coloredSymbolExpr([order2[2]], false)}`;
+          return `${left} <span style="opacity:0.9">=</span> ${right}`;
+        }
+
+        function labelForStep(order, step) {
+          const unit = t('label.unitCubes');
+
+          if (step === 1) {
+            return `${coloredExpr([order[0]], false)} ${unit}`;
+          }
+          if (step === 2) {
+            return `${coloredExpr([order[0], order[1]], true)} ${unit}`;
+          }
+          return `${coloredExpr([order[0], order[1]], true)} × ${coloredExpr([order[2]], false)} ${unit}`;
+        }
+
+        function equalityLabel(order1, order2) {
+          // (x × y) × z = (p × q) × r
+          const left = `${coloredExpr([order1[0], order1[1]], true)} <span style="opacity:0.9">×</span> ${coloredExpr([order1[2]], false)}`;
+          const right = `${coloredExpr([order2[0], order2[1]], true)} <span style="opacity:0.9">×</span> ${coloredExpr([order2[2]], false)}`;
+          return `${left} <span style="opacity:0.9">=</span> ${right}`;
+        }
+
+        // ------------------------------
+        // Minimal tween manager
+        // ------------------------------
+        const tweens = [];
+        function tween({ duration, onUpdate, onComplete, ease }) {
+          const t0 = performance.now();
+          tweens.push({ t0, duration, onUpdate, onComplete, ease: ease || (x => x) });
+        }
+        function tickTweens(now) {
+          for (let i = tweens.length - 1; i >= 0; i--) {
+            const tw = tweens[i];
+            const p = Math.min(1, Math.max(0, (now - tw.t0) / tw.duration));
+            const e = tw.ease(p);
+            tw.onUpdate(e);
+            if (p >= 1) {
+              if (tw.onComplete) tw.onComplete();
+              tweens.splice(i, 1);
+            }
+          }
+        }
+        function easeInOut(x) {
+          return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+        }
+
+        // ------------------------------
+        // Orientation helpers (24 cube rotations)
+        // ------------------------------
+        const _AX_X = new THREE.Vector3(1, 0, 0);
+        const _AX_Y = new THREE.Vector3(0, 1, 0);
+        const _AX_Z = new THREE.Vector3(0, 0, 1);
+
+        function axisNameFromVec(v) {
+          const ax = Math.abs(v.x);
+          const ay = Math.abs(v.y);
+          const az = Math.abs(v.z);
+          if (ax >= ay && ax >= az) return v.x >= 0 ? '+x' : '-x';
+          if (ay >= ax && ay >= az) return v.y >= 0 ? '+y' : '-y';
+          return v.z >= 0 ? '+z' : '-z';
+        }
+
+        function generateCubeOrientations() {
+          const dirs = [
+            new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0),
+            new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0),
+            new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -1)
+          ];
+          const ups = [
+            new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0),
+            new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0),
+            new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -1)
+          ];
+          const out = [];
+          const m = new THREE.Matrix4();
+          const q = new THREE.Quaternion();
+          for (const f of dirs) {
+            for (const u of ups) {
+              if (Math.abs(f.dot(u)) > 1e-6) continue;
+              // Right-handed basis: x = u × f, y = u, z = f
+              const x = new THREE.Vector3().crossVectors(u, f);
+              if (x.lengthSq() < 0.5) continue;
+              x.normalize();
+              const y = u.clone().normalize();
+              const z = f.clone().normalize();
+              m.makeBasis(x, y, z);
+              q.setFromRotationMatrix(m);
+              out.push(q.clone());
+            }
+          }
+          const uniq = [];
+          const seen = new Set();
+          for (const qq of out) {
+            const k = [qq.x, qq.y, qq.z, qq.w].map(n => Math.round(n * 1000)).join(',');
+            if (!seen.has(k)) {
+              seen.add(k);
+              uniq.push(qq);
+            }
+          }
+          return uniq;
+        }
+
+        const CUBE_ORIENTATIONS = generateCubeOrientations();
+
+        function worldLengthsForQuat(localDims, quat) {
+          const vx = _AX_X.clone().applyQuaternion(quat);
+          const vy = _AX_Y.clone().applyQuaternion(quat);
+          const vz = _AX_Z.clone().applyQuaternion(quat);
+
+          const map = {
+            [axisNameFromVec(vx)]: localDims.x,
+            [axisNameFromVec(vy)]: localDims.y,
+            [axisNameFromVec(vz)]: localDims.z
+          };
+
+          const wx = map['+x'] ?? map['-x'];
+          const wy = map['+y'] ?? map['-y'];
+          const wz = map['+z'] ?? map['-z'];
+          return { x: wx, y: wy, z: wz };
+        }
+
+        function findBestAlignmentQuat(leftDims, rightLocalDims) {
+          for (const q of CUBE_ORIENTATIONS) {
+            const wl = worldLengthsForQuat(rightLocalDims, q);
+            if (wl.x === leftDims.x && wl.y === leftDims.y && wl.z === leftDims.z) {
+              return q.clone();
+            }
+          }
+          return new THREE.Quaternion();
+        }
+
+        // ------------------------------
+        // Three.js scene
+        // ------------------------------
+        let renderer, scene, camera;
+        let leftGroup = new THREE.Group();
+        let rightGroup = new THREE.Group();
+        let mergedGroup = new THREE.Group(); // used in scene 3 (both overlapped)
+
+        // For camera framing
+        const CAMERA_POS = new THREE.Vector3(9.5, 6.2, 12.2);
+        const CAMERA_LOOK = new THREE.Vector3(0, 0.35, 0);
+
+        function initThree() {
+          scene = new THREE.Scene();
+
+          const w = workCanvasEl.clientWidth;
+          const h = workCanvasEl.clientHeight;
+
+          camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 200);
+          camera.position.copy(CAMERA_POS);
+          camera.lookAt(CAMERA_LOOK);
+
+          renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+          renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+          renderer.setSize(w, h);
+          renderer.sortObjects = true;
+
+          workCanvasEl.innerHTML = '';
+          workCanvasEl.appendChild(renderer.domElement);
+
+          // Lights
+          const amb = new THREE.AmbientLight(0xffffff, 0.75);
+          scene.add(amb);
+          const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+          dir.position.set(12, 18, 10);
+          scene.add(dir);
+
+          // Groups
+          scene.add(leftGroup);
+          scene.add(rightGroup);
+
+          // Floor plane removed
+
+          window.addEventListener('resize', onResize);
+        }
+
+        function onResize() {
+          if (!renderer || !camera) return;
+          const w = workCanvasEl.clientWidth;
+          const h = workCanvasEl.clientHeight;
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        }
+
+        function clearGroup(g) {
+          while (g.children.length) {
+            const child = g.children.pop();
+            child.traverse?.(obj => {
+              if (obj.geometry) obj.geometry.dispose?.();
+              if (obj.material) {
+                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose?.());
+                else obj.material.dispose?.();
+              }
+            });
+          }
+        }
+
+        function makeUnitCube(materialColor) {
+          const geo = new THREE.BoxGeometry(1, 1, 1);
+          const mat = new THREE.MeshPhongMaterial({
+            color: materialColor,
+            transparent: true,
+            opacity: 0.55,
+            shininess: 25,
+            depthWrite: false
+          });
+          const mesh = new THREE.Mesh(geo, mat);
+
+          const edges = new THREE.EdgesGeometry(geo);
+          const lineMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthTest: false });
+          const line = new THREE.LineSegments(edges, lineMat);
+          mesh.add(line);
+          return mesh;
+        }
+
+        function buildCuboidIntoGroup(g, dims, colorHex, animate) {
+          // dims: {x, y, z, step} in cube counts
+          clearGroup(g);
+
+          const gap = 0.08;
+          const { x, y, z, step } = dims;
+          const totalW = x + (x - 1) * gap;
+          const totalH = y + (y - 1) * gap;
+          const totalD = z + (z - 1) * gap;
+
+          const ox = -totalW / 2 + 0.5;
+          const oy = -totalH / 2 + 0.5;
+          const oz = -totalD / 2 + 0.5;
+
+          // Animation timing: show continuity (copies appear one after the other)
+          const cubeDelay = 38;     // ms per cube within a row
+          const layerDelay = 170;   // ms per copy layer (behind/above)
+          const minScale = 0.001;
+
+          // For step meaning:
+          // step 1: animate along X (ix)
+          // step 2: animate depth layers (iz) one-by-one; within each, along X
+          // step 3: animate height layers (iy) one-by-one; within each, depth then X
+
+          let lastEnd = 0;
+
+          for (let iy = 0; iy < y; iy++) {
+            for (let iz = 0; iz < z; iz++) {
+              for (let ix = 0; ix < x; ix++) {
+                const cube = makeUnitCube(colorHex);
+                cube.position.set(
+                  ox + ix * (1 + gap),
+                  oy + iy * (1 + gap),
+                  oz + iz * (1 + gap)
+                );
+
+                if (animate) cube.scale.set(minScale, minScale, minScale);
+                g.add(cube);
+
+                if (animate) {
+                  let delay = 0;
+                  if (step === 1) {
+                    delay = ix * cubeDelay;
+                  } else if (step === 2) {
+                    delay = iz * layerDelay + ix * cubeDelay;
+                  } else {
+                    // step === 3
+                    delay = iy * layerDelay + iz * (cubeDelay * 0.6) + ix * (cubeDelay * 0.6);
+                  }
+
+                  const duration = 220;
+                  const startAt = performance.now() + delay;
+                  const endAt = startAt + duration;
+                  lastEnd = Math.max(lastEnd, endAt);
+
+                  // Register as a tween with an internal delay by shifting t0
+                  tween({
+                    duration,
+                    ease: easeInOut,
+                    onUpdate: (p) => {
+                      // If called early due to RAF timing, compute a safe local p
+                      const s = minScale + p * (1 - minScale);
+                      cube.scale.set(s, s, s);
+                    },
+                    // shift tween start by setting a future t0
+                    // We'll do this by patching t0 after pushing below
+                  });
+
+                  // Patch the last tween's t0 to future startAt
+                  const tw = tweens[tweens.length - 1];
+                  tw.t0 = startAt;
+                }
+              }
+            }
+          }
+
+          return { totalW, totalH, totalD, lastEnd };
+        }
+
+        // ------------------------------
+        // Scene state machine
+        // ------------------------------
+        let sceneIndex = 1;
+        let scene1Order = [];
+        let scene2Order = [];
+        let scene1Complete = false;
+        let scene2Complete = false;
+        let compareComplete = false;
+        let scene4TargetQ = new THREE.Quaternion();
+
+        // For progressive build: side-by-side = X, behind = Z, above = Y.
+        function dimsFromOrder(order, step) {
+          if (step <= 0) return { x: 0, y: 0, z: 0, step: 0 };
+          if (step === 1) {
+            const n1 = VALUES[order[0]];
+            // 1 × 1 × n1 (row side-by-side)
+            return { x: n1, y: 1, z: 1, step: 1 };
+          }
+          if (step === 2) {
+            const n1 = VALUES[order[0]];
+            const n2 = VALUES[order[1]];
+            // 1 × n1 × n2 (n2 copies behind)
+            return { x: n1, y: 1, z: n2, step: 2 };
+          }
+          const n1 = VALUES[order[0]];
+          const n2 = VALUES[order[1]];
+          const n3 = VALUES[order[2]];
+          // n1 × n2 × n3 (n3 copies above)
+          return { x: n1, y: n3, z: n2, step: 3 };
+        }
+
+        function setWorkLabelSingle(html) {
+          workLabelEl.classList.remove('two');
+          workLabelEl.innerHTML = html;
+        }
+
+        function setWorkLabelTwo(leftHtml, rightHtml) {
+          workLabelEl.classList.add('two');
+          workLabelEl.innerHTML = `<div>${leftHtml}</div><div>${rightHtml}</div>`;
+        }
+
+        function resetTokensForScene1() {
+          enableTokens(['a', 'b', 'c']);
+          setTokenHint(null, false);
+        }
+
+        function resetTokensForScene2() {
+          // Start unforced: all enabled. We will enforce dynamically only if the user risks recreating scene1.
+          enableTokens(['a', 'b', 'c']);
+          setTokenHint(null, false);
+        }
+
+        function handleTokenTap(key) {
+          if (tokens[key].classList.contains('disabled')) return;
+
+          SND.play('tap');
+
+          if (sceneIndex === 1) {
+            if (scene1Order.includes(key)) return;
+            scene1Order.push(key);
+            tokens[key].classList.add('disabled');
+            const step = scene1Order.length;
+
+            const dims = dimsFromOrder(scene1Order, step);
+            buildCuboidIntoGroup(leftGroup, dims, LEFT_CUBOID_COLOR, true);
+            SND.seq('buildStep', step);
+            leftGroup.position.set(0, 0, 0);
+            leftGroup.quaternion.identity();
+
+            setWorkLabelSingle(labelForStep(scene1Order, step));
+            if (step === 1) setInsText(t('ins.tapNext'));
+            if (step === 2) setInsText(t('ins.tapLast'));
+
+            if (step === 3) {
+              scene1Complete = true;
+              SND.seq('sceneComplete');
+              setNext(t('btn.anotherOrder'), true);
+              setInsText(t('ins.tapAnotherOrder'));
+              disableAllTokens();
+            }
+            return;
+          }
+
+          if (sceneIndex === 2) {
+            if (scene2Order.includes(key)) return;
+
+            // Dynamic enforcement only when needed:
+            // Do NOT allow the first two taps to exactly match Scene 1's first two taps.
+            // This prevents the full order from becoming identical (because the third would be forced).
+            if (
+              scene2Order.length === 1 &&
+              scene1Order.length === 3 &&
+              scene2Order[0] === scene1Order[0] &&
+              key === scene1Order[1]
+            ) {
+              // Block this tap; prompt the user to choose another second token.
+              setInsText(t('ins.chooseDifferentSecond'));
+              SND.play('block');
+              // brief visual hint: highlight the other remaining token(s)
+              const remaining = ['a', 'b', 'c'].filter(k => !scene2Order.includes(k) && k !== key);
+              if (remaining.length) setTokenHint(remaining[0], true);
+              // tiny shake effect on the blocked token
+              const el = tokens[key];
+              el.style.transition = 'transform 80ms ease';
+              el.style.transform = 'translateX(-0.12em)';
+              setTimeout(() => (el.style.transform = 'translateX(0.12em)'), 80);
+              setTimeout(() => {
+                el.style.transform = 'translateX(0)';
+                el.style.transition = '';
+              }, 160);
+              return;
+            }
+
+            scene2Order.push(key);
+            tokens[key].classList.add('disabled');
+            setTokenHint(null, false);
+
+            const step = scene2Order.length;
+            const dims = dimsFromOrder(scene2Order, step);
+            buildCuboidIntoGroup(rightGroup, dims, RIGHT_CUBOID_COLOR, true);
+            SND.seq('buildStep', step);
+            // Keep split positions
+            leftGroup.position.set(-SPLIT_SEP, 0, 0);
+            rightGroup.position.set(SPLIT_SEP, 0, 0);
+            leftGroup.quaternion.identity();
+            rightGroup.quaternion.identity();
+
+            const leftLabel = labelForStep(scene1Order, 3);
+            const rightLabel = labelForStep(scene2Order, step);
+            setWorkLabelTwo(leftLabel, rightLabel);
+            if (step === 1) setInsText(t('ins.tapNext'));
+            if (step === 2) setInsText(t('ins.tapLast'));
+
+            if (step === 3) {
+              scene2Complete = true;
+              SND.seq('sceneComplete', 2);
+              setNext(t('btn.compare'), true);
+              setInsText(t('ins.tapCompare'));
+              disableAllTokens();
+            }
+            return;
+          }
+
+          // Scene 3 has no token taps
+        }
+
+        function enterScene1() {
+          sceneIndex = 1;
+          scene1Order = [];
+          scene2Order = [];
+          scene1Complete = false;
+          scene2Complete = false;
+          compareComplete = false;
+
+          clearGroup(leftGroup);
+          clearGroup(rightGroup);
+          rightGroup.visible = false;
+          leftGroup.visible = true;
+
+          setUpperContext(t('upper.chooseOrder'));
+          setInsText(t('ins.tapAnyThree'));
+          setNext('»', false);
+          prevBtn.parentElement.classList.add('hidden');
+
+          resetTokensForScene1();
+          setWorkLabelSingle('');
+        }
+
+        function enterScene2() {
+          sceneIndex = 2;
+          scene2Order = [];
+          scene2Complete = false;
+          compareComplete = false;
+
+          rightGroup.visible = true;
+          leftGroup.visible = true;
+
+          // Move left cuboid to left half (animated)
+          const startX = leftGroup.position.x;
+          const endX = -SPLIT_SEP;
+          tween({
+            duration: 420,
+            ease: easeInOut,
+            onUpdate: (p) => {
+              leftGroup.position.x = startX + (endX - startX) * p;
+            }
+          });
+          // Ensure right group starts hidden until first tap? We'll show but empty.
+          clearGroup(rightGroup);
+          rightGroup.position.set(SPLIT_SEP, 0, 0);
+          rightGroup.quaternion.identity();
+
+          setUpperContext(t('upper.chooseOrder'));
+          setInsText(t('ins.tapAnyThree'));
+          setNext('»', false);
+
+          // Left label fixed, right label blank
+          setWorkLabelTwo(labelForStep(scene1Order, 3), '');
+
+          resetTokensForScene2();
+        }
+
+        function enterScene3Compare() {
+          sceneIndex = 3;
+          compareComplete = false;
+
+          setUpperContext(t('upper.compareConstructions'));
+          setInsText('');
+          setNext('»', false);
+
+          // Merge animation: move both to center, rotate right over
+          const leftStart = leftGroup.position.clone();
+          const rightStart = rightGroup.position.clone();
+
+          const leftEnd = new THREE.Vector3(0, 0, 0);
+          const rightEnd = new THREE.Vector3(0, 0, 0);
+
+          const leftFinalDims = dimsFromOrder(scene1Order, 3);
+          const rightFinalDims = dimsFromOrder(scene2Order, 3);
+
+          const targetQ = findBestAlignmentQuat(
+            { x: leftFinalDims.x, y: leftFinalDims.y, z: leftFinalDims.z },
+            { x: rightFinalDims.x, y: rightFinalDims.y, z: rightFinalDims.z }
+          );
+
+          const qStart = rightGroup.quaternion.clone();
+          const qExtra = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI * 0.75);
+          const qMid = targetQ.clone().multiply(qExtra);
+
+          SND.seq('mergeStart');
+          tween({
+            duration: 650,
+            ease: easeInOut,
+            onUpdate: (p) => {
+              leftGroup.position.lerpVectors(leftStart, leftEnd, p);
+              rightGroup.position.lerpVectors(rightStart, rightEnd, p);
+              // Two-phase quaternion slerp: start -> flourish -> exact target alignment
+              const half = 0.5;
+              if (p < half) {
+                const t = p / half;
+                rightGroup.quaternion.copy(qStart).slerp(qMid, t);
+              } else {
+                const t = (p - half) / half;
+                rightGroup.quaternion.copy(qMid).slerp(targetQ, t);
+              }
+            },
+            onComplete: () => {
+              // Pause 0.5s then do a brief rotate that shows full overlap
+              setTimeout(() => {
+                SND.seq('shakeConfirm');
+                tween({
+                  duration: 520,
+                  ease: easeInOut,
+                  onUpdate: (p2) => {
+                    const wiggle = Math.sin(p2 * Math.PI) * 0.35;
+                    const qW = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), wiggle);
+                    leftGroup.quaternion.identity().multiply(qW);
+                    rightGroup.quaternion.copy(targetQ).multiply(qW);
+                  },
+                  onComplete: () => {
+                    compareComplete = true;
+                    sceneIndex = 4;
+                    SND.seq('confirmed');
+                    symbolicMode = true;
+                    setControlExprSymbolic();
+                    // Insert explanatory statement for final scene control area
+                    controlExpr.innerHTML = `
+                      <div style="text-align:center; line-height:1.25">
+                        <div style="font-size:0.75em; opacity:0.85; margin-bottom:0.2em;">
+                          ${t('control.orderGroupingDoesNotMatter')}
+                        </div>
+                        <div>
+                          <span style="color:${TOKEN_COLORS.a}">a</span>
+                          <span> × </span>
+                          <span style="color:${TOKEN_COLORS.b}">b</span>
+                          <span> × </span>
+                          <span style="color:${TOKEN_COLORS.c}">c</span>
+                        </div>
+                      </div>
+                    `;
+                    scene4TargetQ = targetQ.clone();
+                    setUpperContext(t('upper.algebraAllValues'));
+                    setWorkLabelSingle(symbolicEquality(scene1Order, scene2Order));
+                    setInsText(t('ins.adjustToSeeProductSame'));
+                    setNext(t('btn.redo'), true);
+                    sliderPanel.style.display = 'flex';
+                    sliderA.value = VALUES.a;
+                    sliderB.value = VALUES.b;
+                    sliderC.value = VALUES.c;
+                  }
+                });
+              }, 500);
+            }
+          });
+        }
+
+        let sliderAnimating = false;
+
+        function onSliderRelease() {
+          if (sceneIndex !== 4 || sliderAnimating) return;
+          sliderAnimating = true;
+          SND.seq('sliderRelease');
+          const sep = SPLIT_SEP;
+          const leftStart = leftGroup.position.clone();
+          const rightStart = rightGroup.position.clone();
+          const leftOut = new THREE.Vector3(-sep, 0, 0);
+          const rightOut = new THREE.Vector3(sep, 0, 0);
+
+          // 3) Make sure split rotation interpolates from current pose
+          const qStart = rightGroup.quaternion.clone();
+          const qOut = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            Math.PI * 0.55
+          );
+
+          // A: separate (old configuration)
+          tween({
+            duration: 320,
+            ease: easeInOut,
+            onUpdate: p => {
+              rightGroup.quaternion.copy(qStart).slerp(qOut, p);
+              leftGroup.position.lerpVectors(leftStart, leftOut, p);
+              rightGroup.position.lerpVectors(rightStart, rightOut, p);
+            },
+            onComplete: () => {
+              // B: hold
+              setTimeout(() => {
+                // C: rebuild with new values (animated geometry)
+                const rebuildInfo = rebuildFromSliders();
+
+                SND.seq('rebuildDone');
+                // Restore separated pose after rebuild
+                leftGroup.position.copy(leftOut);
+                rightGroup.position.copy(rightOut);
+                leftGroup.quaternion.identity();
+                rightGroup.quaternion.copy(qOut);
+
+                // D: WAIT — allow rebuild animation + cognitive pause
+                const rebuildEndTime = rebuildInfo?.lastEnd || performance.now();
+                const extraPause = 500; // ms after build completes
+
+                setTimeout(() => {
+                  SND.seq('transition');
+                  // E: rejoin
+                  tween({
+                    duration: 360,
+                    ease: easeInOut,
+                    onUpdate: p2 => {
+                      rightGroup.quaternion.copy(qOut).slerp(scene4TargetQ, p2);
+                      leftGroup.position.lerpVectors(leftOut, leftStart, p2);
+                      rightGroup.position.lerpVectors(rightOut, rightStart, p2);
+                    },
+                    onComplete: () => {
+                      SND.seq('rejoinDone');
+                      // Pause briefly after new dimensions are in place
+                      setTimeout(() => {
+                        const leftDims = dimsFromOrder(scene1Order, 3);
+                        const rightDims = dimsFromOrder(scene2Order, 3);
+                        const targetQ = findBestAlignmentQuat(
+                          { x: leftDims.x, y: leftDims.y, z: leftDims.z },
+                          { x: rightDims.x, y: rightDims.y, z: rightDims.z }
+                        );
+                        const baseQ = targetQ.clone();
+                        // Final confirmation shake (post-update)
+                        tween({
+                          duration: 460,
+                          ease: easeInOut,
+                          onUpdate: p3 => {
+                            const w = Math.sin(p3 * Math.PI) * 0.38;
+                            const qW = new THREE.Quaternion().setFromAxisAngle(
+                              new THREE.Vector3(0, 1, 0), w
+                            );
+                            leftGroup.quaternion.identity().multiply(qW);
+                            rightGroup.quaternion.copy(baseQ).multiply(qW);
+                          },
+                          onComplete: () => {
+                            SND.seq('confirmed');
+                            sliderAnimating = false;
+                          }
+                        });
+                      }, 700); // pause before shake
+                    }
+                  });
+                }, Math.max(0, rebuildEndTime - performance.now()) + extraPause);
+              }, 220);
+            }
+          });
+        }
+
+        function rebuildFromSliders() {
+          // Update values
+          VALUES.a = parseInt(sliderA.value, 10);
+          VALUES.b = parseInt(sliderB.value, 10);
+          VALUES.c = parseInt(sliderC.value, 10);
+
+          // Final dims for each order
+          const leftDims = dimsFromOrder(scene1Order, 3);
+          const rightDims = dimsFromOrder(scene2Order, 3);
+
+          // Rebuild geometry ONLY (animated)
+          const leftBuild = buildCuboidIntoGroup(
+            leftGroup,
+            leftDims,
+            LEFT_CUBOID_COLOR,
+            true
+          );
+          const rightBuild = buildCuboidIntoGroup(
+            rightGroup,
+            rightDims,
+            RIGHT_CUBOID_COLOR,
+            true
+          );
+
+          // Compute alignment quaternion for later merge
+          scene4TargetQ = findBestAlignmentQuat(
+            { x: leftDims.x, y: leftDims.y, z: leftDims.z },
+            { x: rightDims.x, y: rightDims.y, z: rightDims.z }
+          );
+
+          // Update symbolic equality text
+          setWorkLabelSingle(symbolicEquality(scene1Order, scene2Order));
+
+          // RETURN rebuild timing so caller can wait correctly
+          return {
+            lastEnd: Math.max(leftBuild.lastEnd, rightBuild.lastEnd)
+          };
+        }
+        [sliderA, sliderB, sliderC].forEach(sl => {
+          sl.addEventListener('input', () => {
+            labelA.textContent = `a = ${sliderA.value}`;
+            labelB.textContent = `b = ${sliderB.value}`;
+            labelC.textContent = `c = ${sliderC.value}`;
+            SND.slide(parseInt(sl.value, 10));
+          });
+        });
+        [sliderA, sliderB, sliderC].forEach(sl => {
+          sl.addEventListener('change', onSliderRelease);
+          sl.addEventListener('pointerup', onSliderRelease);
+          sl.addEventListener('touchend', onSliderRelease);
+        });
+        function restartApplet() {
+          symbolicMode = false;
+          sliderPanel.style.display = 'none';
+
+          // Reset VALUES to defaults
+          VALUES.a = 4;
+          VALUES.b = 2;
+          VALUES.c = 3;
+
+          // Reset sliders
+          sliderA.value = VALUES.a;
+          sliderB.value = VALUES.b;
+          sliderC.value = VALUES.c;
+          labelA.textContent = `a = ${VALUES.a}`;
+          labelB.textContent = `b = ${VALUES.b}`;
+          labelC.textContent = `c = ${VALUES.c}`;
+
+          // Rebuild numeric tappable expression correctly
+          rebuildNumericControlExpr();
+
+          // Clear tween state
+          tweens.length = 0;
+
+          // Clear groups
+          clearGroup(leftGroup);
+          clearGroup(rightGroup);
+
+          // Remove old canvas and recreate renderer to fully reset WebGL state
+          try {
+            if (renderer) {
+              renderer.dispose();
+              if (renderer.domElement && renderer.domElement.parentNode) {
+                renderer.domElement.parentNode.removeChild(renderer.domElement);
+              }
+            }
+          } catch (e) {}
+
+          renderer = null;
+          camera = null;
+          scene = null;
+
+          // Re-init
+          initThree();
+          enterScene1();
+        }
+
+        // ------------------------------
+        // Wire up events
+        // ------------------------------
+        function onTokenClick(e) {
+          const key = e.currentTarget.dataset.key;
+          handleTokenTap(key);
+        }
+
+        Object.values(tokens).forEach(el => {
+          el.addEventListener('click', onTokenClick);
+          el.addEventListener('touchend', (ev) => {
+            // prevent 300ms delay and accidental zoom
+            ev.preventDefault();
+            el.click();
+          }, { passive: false });
+        });
+
+        prevBtn.addEventListener('click', () => {
+          // Not used in this flow; keep disabled.
+        });
+
+        nextBtn.addEventListener('click', () => {
+          if (nextBtn.disabled) return;
+          if (nextBtn.textContent.trim().toLowerCase() === t('btn.redo').toLowerCase()) {
+            SND.seq('reset');
+            setNext('»', false);
+            restartApplet();
+            return;
+          }
+          if (sceneIndex === 1 && scene1Complete) {
+            SND.seq('transition');
+            setNext('»', false);
+            enterScene2();
+            return;
+          }
+          if (sceneIndex === 2 && scene2Complete) {
+            SND.seq('transitionStrong');
+            setNext('»', false);
+            enterScene3Compare();
+            return;
+          }
+        });
+
+        // ------------------------------
+        // Render loop
+        // ------------------------------
+        function animate(now) {
+          requestAnimationFrame(animate);
+          tickTweens(now);
+
+          // gentle idle camera settle
+          if (camera) camera.lookAt(CAMERA_LOOK);
+
+          renderer.render(scene, camera);
+        }
+
+        // ------------------------------
+        // Boot
+        // ------------------------------
+        // Token text: show numeric values (colored), not just variable letters.
+        tokA.innerHTML = `<span style="color:${TOKEN_COLORS.a}">${VALUES.a}</span>`;
+        tokB.innerHTML = `<span style="color:${TOKEN_COLORS.b}">${VALUES.b}</span>`;
+        tokC.innerHTML = `<span style="color:${TOKEN_COLORS.c}">${VALUES.c}</span>`;
+
+        // Init three and start
+        initThree();
+        enterScene1();
+        animate(performance.now());
+      })();
+    </script>
+  </body>
+</html>
+
+
